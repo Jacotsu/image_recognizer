@@ -3,12 +3,14 @@
 from image_match.goldberg import ImageSignature
 import hashlib
 import numpy as np
+import sqlite3
 from functools import partial
 from pathlib import PurePath
 import os
 import sys
 import logging
 import json
+import yaml
 import argparse
 import itertools
 from concurrent.futures import ThreadPoolExecutor
@@ -16,6 +18,37 @@ from concurrent.futures import wait
 from concurrent.futures import ALL_COMPLETED
 
 max_threads = 8
+
+
+class DbMan:
+    queries = None
+
+    def __init__(self,
+                 db='image_recognizer.db',
+                 queries_file='queries.sql'):
+        if not DbMan.queries:
+            with open(queries_file, 'r') as config:
+                try:
+                    DbMan.queries = yaml.load(config)
+                except yaml.YAMLError as exc:
+                    logging.error(exc)
+                    raise exc
+
+        self.conn = sqlite3.connect(db)
+        with self.conn:
+            self.conn.execute(DbMan.queries['create_tables'])
+
+    def insert_images_data(self, image_tuples):
+        if image_tuples is not list:
+            image_tuples = [image_tuples]
+
+        with self.conn:
+            self.con.executemany(DbMan.queries['insert_image_metadata'],
+                                 image_tuples)
+
+    def get_images_data(self, image_hashes):
+        if image_hashes is not list:
+            image_hashes = [image_hashes]
 
 
 def md5sum(filename):
@@ -43,6 +76,31 @@ def calculate_file_signature(file_full_path, gis, db):
     except:
         logging.error('An error occurred while processing {}'
                       .format(file_full_path))
+
+
+def calculate_batch_signature(files_full_path):
+    if files_full_path is not list:
+        files_full_path = [files_full_path]
+
+    gis = ImageSignature()
+
+    signatures = []
+
+    for file_full_path in files_full_path:
+        file_hash = str(md5sum(file_full_path))
+
+        try:
+            image_signature = gis.generate_signature(file_full_path)
+            signatures.append((image_signature.tolist(),
+                               file_hash,
+                               file_full_path
+                               ))
+            logging.debug('Calculated signature of {}: \n{}'
+                          .format(file_full_path, image_signature))
+        except:
+            logging.error('An error occurred while processing {}'
+                          .format(file_full_path))
+    return signatures
 
 
 def calculate_signatures(root_path, database='signatures.json'):
