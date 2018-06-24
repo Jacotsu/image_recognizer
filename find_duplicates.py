@@ -224,15 +224,15 @@ def match_images(img1, img2, threshold, gis, db=DbMan()):
                                   np.array(img2['signature']))
 
     if len(img1['path']) > 1:
-        logging.info('Similar images found: {:.5f} \n {} \n'
+        logging.info('Similar images found: {:.5f} \n{}\n'
                      .format(dis, '\n'.join(img1['path'])))
 
     if len(img2['path']) > 1:
-        logging.info('Similar images found: {:.5f} \n {} \n'
+        logging.info('Similar images found: {:.5f} \n{}\n'
                      .format(dis, '\n'.join(img2['path'])))
 
     if dis < threshold:
-        logging.info('Similar images found: {:.5f} \n {} \n {} \n'
+        logging.info('Similar images found: {:.5f} \n{}\n{}\n'
                      .format(dis,
                              img1['path'][0],
                              img2['path'][0]))
