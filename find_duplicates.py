@@ -234,19 +234,22 @@ def match_images(img1, img2, threshold, gis, db=DbMan()):
     if dis < threshold:
         logging.info('Similar images found: {:.5f} \n {} \n {} \n'
                      .format(dis,
-                             img1['path'],
-                             img2['path']))
+                             img1['path'][0],
+                             img2['path'][0]))
 
 
 def find_matches(threshold, db=DbMan()):
     gis = ImageSignature()
     data = []
 
+    logging.info('Image matching started')
+
     for img1, img2 in itertools.combinations(db.get_all_images(), 2):
         data.append((img1, img2, threshold, gis))
-
-    with Pool(max_threads) as ppool:
-        ppool.starmap(match_images, data)
+        if len(data) > 50:
+            with Pool(max_threads) as ppool:
+                ppool.starmap(match_images, data)
+            data = []
 
     logging.info('Image matching finished')
 
