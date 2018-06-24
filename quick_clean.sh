@@ -1,19 +1,15 @@
 #!/usr/bin/env bash
 
-counter=0
-files[0]=''
-files[1]=''
+files=()
 
 
-for entry in $(grep -A 2 "INFO:root:Similar images found" $1); do
-    if [ -f "$entry" ]; then
-        files[counter]="$entry"
-        ((counter++))
-    fi
+MATCHES_REGEX='/Image/,/Image/p'
+PATHS_REGEX='(^\/.*$)'
 
-    if (( counter >= 2 )); then
-        eog "${files[0]}" "${files[1]}"
-        counter=0
-    fi
+MATCHES=$(sed -n "$MATCHES_REGEX" $1)
+PATHS=$(grep -Po "$PATHS_REGEX" <<<$MATCHES)
 
+for entry in $PATHS; do
+    files+=("$entry")
 done
+eog ${files[*]}
