@@ -37,7 +37,7 @@ class ImageGenerator:
                    'signature': ast.literal_eval(val[1])
                    }
 
-            paths = self.db.get_img_path(img)
+            paths = self.db.get_img_paths(img)
             img['path'] = paths
             return img
         else:
@@ -163,12 +163,12 @@ class DbMan:
                 if not os.path.isfile(path[1]):
                     conn.execute(DbMan.queries['delete_path'], (path[0],))
 
-    def get_img_path(self, img):
+    def get_img_paths(self, img):
         if not self.conn[threading.current_thread()]:
             self.conn[threading.current_thread()] = sqlite3.connect(self.db)
 
         with self.conn[threading.current_thread()] as conn:
-            results = conn.execute(DbMan.queries['get_path'],
+            results = conn.execute(DbMan.queries['get_paths'],
                                    (img['hash'],))
             return [res[0] for res in results]
 
