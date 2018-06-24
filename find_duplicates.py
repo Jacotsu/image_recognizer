@@ -225,11 +225,11 @@ def match_images(img1, img2, threshold, gis, db=DbMan()):
 
     if len(img1['path']) > 1:
         logging.info('Similar images found: {:.5f} \n{}\n'
-                     .format(dis, '\n'.join(img1['path'])))
+                     .format(1, '\n'.join(img1['path'])))
 
     if len(img2['path']) > 1:
         logging.info('Similar images found: {:.5f} \n{}\n'
-                     .format(dis, '\n'.join(img2['path'])))
+                     .format(1, '\n'.join(img2['path'])))
 
     if dis < threshold:
         logging.info('Similar images found: {:.5f} \n{}\n{}\n'
