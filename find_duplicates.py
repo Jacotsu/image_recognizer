@@ -118,7 +118,7 @@ class DbMan:
             res = conn.execute(DbMan.queries['get_all_images'])
             if res:
                 logging.info('Extracted all images from database')
-                return ImageGenerator(res, self.db)
+                return ImageGenerator(res, self)
 
     def check_images_presence(self, images):
         if not self.conn[threading.current_thread()]:
