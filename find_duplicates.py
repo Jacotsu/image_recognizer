@@ -19,6 +19,28 @@ from multiprocessing import Pool
 max_threads = 8
 
 
+class ImageGenerator:
+    def __init__(self, cursor, db):
+        self.cursor = cursor
+        self.db = db
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        val = self.cursor.fetchone()
+        if val:
+            img = {'hash': val[0],
+                   'signature': ast.literal_eval(val[1])
+                   }
+
+            paths = self.db.get_img_path(img)
+            img['path'] = paths
+            return img
+        else:
+            raise StopIteration()
+
+
 class DbMan:
     queries = None
 
@@ -90,18 +112,10 @@ class DbMan:
             self.conn[threading.current_thread()] = sqlite3.connect(self.db)
 
         with self.conn[threading.current_thread()] as conn:
-            results = []
             res = conn.execute(DbMan.queries['get_all_images'])
             if res:
-                for img in res.fetchall():
-                    img_paths = conn.execute(DbMan.queries['get_paths'],
-                                             (img[0],))
-                    results.append({'hash': img[0],
-                                    'signature': ast.literal_eval(img[1]),
-                                    'path': [path[0] for path in
-                                             img_paths.fetchall()]})
-            logging.info('Extracted all images from database')
-            return results
+                logging.info('Extracted all images from database')
+                return ImageGenerator(res, self.db)
 
     def check_images_presence(self, images):
         if not self.conn[threading.current_thread()]:
@@ -135,6 +149,16 @@ class DbMan:
         with self.conn[threading.current_thread()] as conn:
             conn.executemany(DbMan.queries['insert_path'],
                              path_list)
+
+    def clean_orphan_paths(self):
+        if not self.conn[threading.current_thread()]:
+            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+
+        with self.conn[threading.current_thread()] as conn:
+            res = conn.execute(DbMan.queries['get_all_paths'])
+            for path in res:
+                if not os.path.isfile(path[1]):
+                    conn.execute(DbMan.queries['delete_path'], (path[0],))
 
     def get_img_path(self, img):
         if not self.conn[threading.current_thread()]:
@@ -210,6 +234,8 @@ def calculate_batch_signature(files_full_path):
 def calculate_signatures(root_path, db=DbMan()):
     gis = ImageSignature()
 
+    db.clean_orphan_paths()
+
     with Pool(max_threads) as ppool:
         full_paths = []
         for path, subdirs, files in os.walk(root_path):
@@ -244,12 +270,12 @@ def find_matches(threshold, db=DbMan()):
 
     logging.info('Image matching started')
 
-    for img1, img2 in itertools.combinations(db.get_all_images(), 2):
-        data.append((img1, img2, threshold, gis))
-        if len(data) > 50:
-            with Pool(max_threads) as ppool:
+    with Pool(max_threads) as ppool:
+        for img1, img2 in itertools.combinations(db.get_all_images(), 2):
+            data.append((img1, img2, threshold, gis))
+            if len(data) > 100:
                 ppool.starmap(match_images, data)
-            data = []
+                data = []
 
     logging.info('Image matching finished')
 
