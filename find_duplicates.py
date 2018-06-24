@@ -27,6 +27,9 @@ class ImageGenerator:
     def __iter__(self):
         return self
 
+    def __next__(self):
+        return self.next()
+
     def next(self):
         val = self.cursor.fetchone()
         if val:
