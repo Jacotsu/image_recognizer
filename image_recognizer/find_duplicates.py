@@ -1,11 +1,6 @@
-#!/usr/bin/env python3
-
-from image_match.goldberg import ImageSignature
 import hashlib
 import numpy as np
 import sqlite3
-from functools import partial
-from pathlib import PurePath
 import os
 import sys
 import logging
@@ -14,10 +9,14 @@ import itertools
 import threading
 import ast
 from multiprocessing import Pool
-
+from functools import partial
+from pathlib import PurePath
+from image_match.goldberg import ImageSignature
+from appdirs import user_data_dir
 from image_recognizer import queries
 
 max_threads = 8
+appname = 'image_recognizer'
 
 
 class ImageGenerator:
@@ -46,7 +45,9 @@ class DbMan:
     queries = None
 
     def __init__(self,
-                 db='image_recognizer.db'):
+                 db=os.path.join(user_data_dir(appname),
+                                 'image_recognizer.db')):
+        os.makedirs(user_data_dir(appname), exist_ok=True)
         self.db = db
         self.conn = {threading.current_thread(): sqlite3.connect(db)}
         with self.conn[threading.current_thread()] as conn:
@@ -241,14 +242,6 @@ def calculate_signatures(root_path, db=DbMan()):
 def match_images(img1, img2, threshold, gis, db=DbMan()):
     dis = gis.normalized_distance(np.array(img1['signature']),
                                   np.array(img2['signature']))
-
-    #if len(img1['path']) > 1:
-    #    logging.info('Similar images found: {:.5f} \n{}\n'
-    #                 .format(0, '\n'.join(img1['path'][1:])))
-
-    #if len(img2['path']) > 1:
-    #    logging.info('Similar images found: {:.5f} \n{}\n'
-    #                 .format(0, '\n'.join(img2['path'][1:])))
 
     if dis < threshold:
         logging.info('Similar images found: {:.5f} \n{}\n{}\n'
