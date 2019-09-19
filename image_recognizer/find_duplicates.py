@@ -49,15 +49,19 @@ class DbMan:
                                  'image_recognizer.db')):
         os.makedirs(user_data_dir(appname), exist_ok=True)
         self.db = db
-        self.conn = {threading.current_thread(): sqlite3.connect(db)}
+        self.conn = {threading.current_thread(): sqlite3.connect(db, 15)}
         with self.conn[threading.current_thread()] as conn:
             conn.execute(queries.create_metadata_table)
             conn.execute(queries.create_paths_table)
             conn.executescript(queries.init_pragmas)
 
-    def insert_images_data(self, images):
+    def _init_connection(self):
         if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+            self.conn[threading.current_thread()] = sqlite3.connect(self.db,
+                                                                    15)
+
+    def insert_images_data(self, images):
+        self._init_connection()
 
         if type(images) is not list:
             images = [images]
@@ -75,8 +79,7 @@ class DbMan:
             logging.debug('Inserted {} in database'.format(signatures))
 
     def get_images_data(self, image_hashes):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         if type(image_hashes) is not list:
             image_hashes = [image_hashes]
@@ -103,8 +106,7 @@ class DbMan:
                     logging.debug('Extracted {} from database'.format(data))
 
     def get_all_images(self, page=0):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         with self.conn[threading.current_thread()] as conn:
             res = conn.execute(queries.get_all_images)
@@ -113,8 +115,7 @@ class DbMan:
                 return ImageGenerator(res, self)
 
     def check_images_presence(self, images):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         if type(images) is not list:
             images = [images]
@@ -131,8 +132,7 @@ class DbMan:
             return non_present_images
 
     def add_imgs_paths(self, img):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         if type(img) is not list:
             img = [img]
@@ -146,8 +146,7 @@ class DbMan:
                              path_list)
 
     def clean_orphan_paths(self):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         with self.conn[threading.current_thread()] as conn:
             res = conn.execute(queries.get_all_paths)
@@ -156,8 +155,7 @@ class DbMan:
                     conn.execute(queries.delete_path, (path[0],))
 
     def get_img_paths(self, img):
-        if not self.conn[threading.current_thread()]:
-            self.conn[threading.current_thread()] = sqlite3.connect(self.db)
+        self._init_connection()
 
         with self.conn[threading.current_thread()] as conn:
             results = conn.execute(queries.get_paths,
