@@ -1,6 +1,6 @@
 init_pragmas = '''
 PRAGMA jorunal_mode = WAL;
-PRAGRAM threads = 8;
+PRAGMA threads = 8;
 '''
 
 create_metadata_table = '''
