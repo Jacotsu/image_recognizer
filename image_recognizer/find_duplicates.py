@@ -53,6 +53,7 @@ class DbMan:
         with self.conn[threading.current_thread()] as conn:
             conn.execute(queries.create_metadata_table)
             conn.execute(queries.create_paths_table)
+            conn.executescript(queries.init_pragmas)
 
     def insert_images_data(self, images):
         if not self.conn[threading.current_thread()]:
