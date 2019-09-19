@@ -8,7 +8,8 @@ setup(
     license='AGPLv3+',
     install_requires=[
         "image_match",
-        "numpy"
+        "numpy",
+        "appdirs"
     ],
     python_requires='>=3.7',
     packages=['image_recognizer'],

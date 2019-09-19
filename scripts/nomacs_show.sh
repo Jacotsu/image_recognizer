@@ -6,7 +6,7 @@ counter=0
 MATCHES_REGEX='/Image/,/Image/p'
 PATHS_REGEX='(^\/.*$)'
 
-MATCHES=$(sed -n "$MATCHES_REGEX" $1)
+MATCHES=$(sed -n "$MATCHES_REGEX" "$1")
 PATHS=$(grep -Po "$PATHS_REGEX" <<<$MATCHES)
 
 for entry in $PATHS; do
@@ -15,10 +15,12 @@ for entry in $PATHS; do
         ((counter++))
     fi
 
-    if (( $counter > 10 )); then
-        eog ${files[*]}
+    if (( $counter > 1 )); then
+        for file in ${files[*]}; do
+            nomacs "$file" &
+            read
+        done
         files=()
         counter=0
     fi
 done
-eog ${files[*]}
