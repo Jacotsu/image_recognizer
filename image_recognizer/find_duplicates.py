@@ -19,6 +19,17 @@ max_threads = 8
 appname = 'image_recognizer'
 
 
+def chunks(l, n):
+    """
+    https://stackoverflow.com/questions/312443
+    /how-do-you-split-a-list-into-evenly-sized-chunks
+
+    Yield successive n-sized chunks from l.
+    """
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
 class ImageGenerator:
     def __init__(self, cursor, db):
         self.cursor = cursor
@@ -199,43 +210,29 @@ def calculate_file_signature(file_full_path, gis, db=DbMan()):
             logging.error(ex)
 
 
-def calculate_batch_signature(files_full_path):
+def calculate_batch_signatures(files_full_path):
+    logging.debug('Starting batch signature processing')
     if type(files_full_path) is not list:
         files_full_path = [files_full_path]
 
     gis = ImageSignature()
 
-    signatures = []
-
-    for file_full_path in files_full_path:
-        file_hash = str(md5sum(file_full_path))
-
-        try:
-            image_signature = gis.generate_signature(file_full_path)
-            signatures.append((image_signature.tolist(),
-                               file_hash,
-                               file_full_path
-                               ))
-            logging.debug('Calculated signature of {}: \n{}'
-                          .format(file_full_path, image_signature))
-        except:
-            logging.error('An error occurred while processing {}'
-                          .format(file_full_path))
-    return signatures
+    for path in files_full_path:
+        calculate_file_signature(path, gis)
 
 
 def calculate_signatures(root_path, db=DbMan()):
-    gis = ImageSignature()
-
     db.clean_orphan_paths()
 
     with Pool(max_threads) as ppool:
         full_paths = []
         for path, subdirs, files in os.walk(root_path):
             for name in files:
-                full_paths.append((PurePath(path, name), gis))
+                full_paths.append(PurePath(path, name))
 
-        ppool.starmap(calculate_file_signature, full_paths)
+        batch_size = round(len(full_paths)/max_threads)
+        ppool.map(calculate_batch_signatures,
+                  chunks(full_paths, batch_size))
 
 
 def match_images(img1, img2, threshold, gis, db=DbMan()):
@@ -264,6 +261,7 @@ def find_matches(threshold, db=DbMan()):
 
     logging.info('Image matching finished')
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command',
@@ -285,6 +283,7 @@ def main():
         calculate_signatures(args.path)
     else:
         find_matches(args.threshold)
+
 
 if __name__ == "__main__":
     main()
